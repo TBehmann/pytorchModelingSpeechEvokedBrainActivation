@@ -223,8 +223,8 @@ class Model_Plotter(Plotter):
         super().__init__(type(self).__name__)
 
     def plot(self, model, data, idx):
-        X, *rest = data[0]
-        draw_graph(model, graph_name=type(model).__name__, input_size=(X.shape), expand_nested=True).visual_graph.render(format='svg')
+        X, *rest = data[idx]
+        draw_graph(model, graph_name=type(model).__name__, input_size=tuple(X.shape), expand_nested=True).visual_graph.render(format='svg')
 
 def test(path):
     a = utils.data.load_dict_from_pickle(path+'.pkl')
