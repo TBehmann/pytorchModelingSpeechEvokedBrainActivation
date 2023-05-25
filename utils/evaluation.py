@@ -11,9 +11,10 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import roc_auc_score
 import numpy as np
 from scipy.io import savemat
+from torchview import draw_graph
 
 
-def evaluate_DNN(name, path, meta_data_files=[], scorers=[], plotters=[]):
+def evaluate_DNN(name, path, dataPath=None, meta_data_files=[], scorers=[], plotters=[]):
     results_csv = []
     results_mat = dict()
 
@@ -29,7 +30,10 @@ def evaluate_DNN(name, path, meta_data_files=[], scorers=[], plotters=[]):
         meta_data = utils.data.load_dict_from_pickle(meta_data_path)
 
         if meta_data.get('dataset') not in test_datasets:
-            test_datasets.update({meta_data.get('dataset'): utils.data.SimpleDataset(dataset=meta_data.get('dataset'))})
+            if dataPath is None:
+                test_datasets.update({meta_data.get('dataset'): utils.data.SimpleDataset(dataset=meta_data.get('dataset'))})
+            else:
+                test_datasets.update({meta_data.get('dataset'): utils.data.SimpleDataset(dataPath=dataPath, dataset=meta_data.get('dataset'))})
 
 
         model_scores_mat = []
@@ -212,6 +216,15 @@ class ROC_Curve_Plotter(Plotter):
         if isinstance(pred, tuple):
             pred = pred[0]
         plot_roc_cur(y,pred)
+
+class Model_Plotter(Plotter):
+
+    def __init__(self):
+        super().__init__(type(self).__name__)
+
+    def plot(self, model, data, idx):
+        X, *rest = data[0]
+        draw_graph(model, graph_name=type(model).__name__, input_size=(X.shape), expand_nested=True).visual_graph.render(format='svg')
 
 def test(path):
     a = utils.data.load_dict_from_pickle(path+'.pkl')
