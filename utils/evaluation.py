@@ -14,7 +14,7 @@ from scipy.io import savemat
 from torchview import draw_graph
 
 
-def evaluate_DNN(name, path, dataPath=None, meta_data_files=[], scorers=[], plotters=[]):
+def evaluate_DNN(name, path, save_path=None, data_path=None, meta_data_files=[], scorers=[], plotters=[]):
     results_csv = []
     results_mat = dict()
 
@@ -30,10 +30,10 @@ def evaluate_DNN(name, path, dataPath=None, meta_data_files=[], scorers=[], plot
         meta_data = utils.data.load_dict_from_pickle(meta_data_path)
 
         if meta_data.get('dataset') not in test_datasets:
-            if dataPath is None:
+            if data_path is None:
                 test_datasets.update({meta_data.get('dataset'): utils.data.SimpleDataset(dataset=meta_data.get('dataset'))})
             else:
-                test_datasets.update({meta_data.get('dataset'): utils.data.SimpleDataset(dataPath=dataPath, dataset=meta_data.get('dataset'))})
+                test_datasets.update({meta_data.get('dataset'): utils.data.SimpleDataset(dataPath=data_path, dataset=meta_data.get('dataset'))})
 
 
         model_scores_mat = []
@@ -72,7 +72,8 @@ def evaluate_DNN(name, path, dataPath=None, meta_data_files=[], scorers=[], plot
                 plotter.plot(
                     model,
                     test_datasets.get(meta_data.get('dataset')),
-                    meta_data.get('idx_val')[fold]
+                    meta_data.get('idx_val')[fold],
+                    save_path
                 )
 
         model_dict_mat = dict({'scores': model_scores_mat,
@@ -82,16 +83,17 @@ def evaluate_DNN(name, path, dataPath=None, meta_data_files=[], scorers=[], plot
                                'chans':test_datasets.get(meta_data.get('dataset')).chans})
         results_mat.update({meta_data_file: model_dict_mat})
 
-    for meta_data_file_name, model_dict in results_mat.items():
-        savemat(path + os.sep + name + '_' + meta_data_file_name +'.mat', model_dict)
+    if scorers:
+        for meta_data_file_name, model_dict in results_mat.items():
+            savemat(save_path + os.sep + name + '_' + meta_data_file_name + '.mat', model_dict)
 
-    df = pd.DataFrame(results_csv)
-    means = df.groupby('name').mean().reset_index()
-    means['fold'] = 'mean'
-    std = df.groupby('name').std().reset_index()
-    std['fold'] = 'std'
-    result_df = df.append(means, ignore_index=True).append(std, ignore_index=True)
-    result_df.sort_values(by=['name','fold']).to_csv(path + os.sep + name +'.csv', sep='\t', encoding='utf-8')
+        df = pd.DataFrame(results_csv)
+        means = df.groupby('name').mean().reset_index()
+        means['fold'] = 'mean'
+        std = df.groupby('name').std().reset_index()
+        std['fold'] = 'std'
+        result_df = df.append(means, ignore_index=True).append(std, ignore_index=True)
+        result_df.sort_values(by=['name','fold']).to_csv(meta_data_path + os.sep + name + '.csv', sep='\t', encoding='utf-8')
 
 def plot_roc_cur(target, pred):
     fper, tper, _ = roc_curve(target, pred)
@@ -148,7 +150,7 @@ class Plotter(metaclass = abc.ABCMeta):
         self.name=name
 
     @abc.abstractmethod
-    def plot(self, model, data, idx):
+    def plot(self, model, data, idx, savePath):
         """Plots the given data defined by the given indices"""
 
 class F1_Scorer(Scorer):
@@ -197,7 +199,7 @@ class Pred_True_Label_Comparision_Plotter(Plotter):
         self.sample_freq = sample_freq
         self.binary = binary
 
-    def plot(self, model, data, idx):
+    def plot(self, model, data, idx, savePath):
         X, y, *rest = data[idx]
         pred = generate_model_prediction(X, model)
         if isinstance(pred, tuple):
@@ -210,7 +212,7 @@ class ROC_Curve_Plotter(Plotter):
     def __init__(self):
         super().__init__(type(self).__name__)
 
-    def plot(self, model, data, idx):
+    def plot(self, model, data, idx, savePath):
         X, y, *rest = data[idx]
         pred = generate_model_prediction(X, model)
         if isinstance(pred, tuple):
@@ -222,9 +224,16 @@ class Model_Plotter(Plotter):
     def __init__(self):
         super().__init__(type(self).__name__)
 
-    def plot(self, model, data, idx):
-        X, *rest = data[idx]
-        draw_graph(model, graph_name=type(model).__name__, input_size=tuple(X.shape), expand_nested=True).visual_graph.render(format='svg')
+    def plot(self, model, data, idx, savePath=None):
+        X, *rest = data[0]
+        input_size = list(X.shape)
+        input_size.insert(0,1)
+        if savePath is None:
+            draw_graph(model, graph_name=type(model).__name__, input_size= input_size,
+                       expand_nested=True).visual_graph.render(format='svg')
+        else:
+            draw_graph(model, graph_name=type(model).__name__, input_size= input_size,
+                       expand_nested=True).visual_graph.render(directory=savePath, format='svg')
 
 def test(path):
     a = utils.data.load_dict_from_pickle(path+'.pkl')
