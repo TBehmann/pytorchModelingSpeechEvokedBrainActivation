@@ -132,7 +132,7 @@ class cla_model(utils.model.Model):
                                'folds': folds,
                                'model_class': cla_model(self.architecture_class),
                                'model_relative_paths': model_names})
-        utils.data.save_dict_to_pickle(self.meta_data, save_path)
+        utils.data.save_dict_to_pickle(self.meta_data, save_path + os.sep + name)
 
 class DefaultArchitecture(nn.Module):
     def __init__(self, kwargs):

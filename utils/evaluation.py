@@ -234,28 +234,3 @@ class Model_Plotter(Plotter):
         else:
             draw_graph(model, graph_name=type(model).__name__, input_size= input_size,
                        expand_nested=True).visual_graph.render(directory=savePath, format='svg')
-
-def test(path):
-    a = utils.data.load_dict_from_pickle(path+'.pkl')
-    d = dict()
-    for i in range(5):
-        d.update({i: path+'_fold_'+str(i)+'.pth'})
-    a.update({'model_paths': d})
-    utils.data.save_dict_to_pickle(a,path)
-    return a
-
-def temp(path):
-    a = utils.data.load_dict_from_pickle(path+'.pkl')
-    a.update({'model_paths': {0: path + 'no_folds.pth'}})
-    utils.data.save_dict_to_pickle(a,path)
-    return a
-
-def test2(path):
-    a = utils.data.load_dict_from_pickle(path+'.pkl')
-    d = dict()
-    for i, model_path in  a.get('model_paths').items():
-        head, tail = os.path.split(model_path)
-        d.update({i: tail})
-    a.update({'model_relative_paths': d})
-    utils.data.save_dict_to_pickle(a,path)
-    return a
